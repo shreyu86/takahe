@@ -117,6 +117,8 @@ import networkx as nx
 #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
 # [ Class word_graph
 #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
+
+
 class word_graph:
     """
     The word_graph class constructs a word graph from the set of sentences given
@@ -142,14 +144,14 @@ class word_graph:
 
         self.length = len(sentence_list)
         """ The number of sentences given for fusion. """
-        
+
         self.nb_words = nb_words
         """ The minimal number of words in the compression. """
 
         self.resources = os.path.dirname(__file__) + '/resources/'
         """ The path of the resources folder. """
 
-        self.stopword_path = self.resources+'stopwords.'+lang+'.dat'
+        self.stopword_path = self.resources + 'stopwords.' + lang + '.dat'
         """ The path of the stopword list, e.g. stopwords.[lang].dat. """
 
         self.stopwords = self.load_stopwords(self.stopword_path)
@@ -160,7 +162,7 @@ class word_graph:
 
         self.graph = nx.DiGraph()
         """ The directed graph used for fusion. """
-    
+
         self.start = '-start-'
         """ The start token in the graph. """
 
@@ -169,12 +171,11 @@ class word_graph:
 
         self.sep = '/-/'
         """ The separator used between a word and its POS in the graph. """
-        
+
         self.term_freq = {}
         """ The frequency of a given term. """
-        
-        self.verbs = set(['VB', 'VBD', 'VBP', 'VBZ', 'VH', 'VHD', 'VHP', 'VBZ', 
-        'VV', 'VVD', 'VVP', 'VVZ'])
+
+        self.verbs = set(['VB', 'VBD', 'VBP', 'VBZ', 'VH', 'VHD', 'VHP', 'VBZ', 'VV', 'VVD', 'VVP', 'VVZ'])
         """
         The list of verb POS tags required in the compression. At least *one* 
         verb must occur in the candidate compressions.
@@ -192,7 +193,8 @@ class word_graph:
 
         # 3. Build the word graph
         self.build_graph()
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -203,10 +205,10 @@ class word_graph:
         """
 
         for i in range(self.length):
-        
+
             # Normalise extra white spaces
             self.sentence[i] = re.sub(' +', ' ', self.sentence[i])
-            
+
             # Tokenize the current sentence in word/POS
             sentence = self.sentence[i].split(' ')
 
@@ -215,24 +217,24 @@ class word_graph:
 
             # Looping over the words
             for w in sentence:
-                
                 # Splitting word, POS
                 m = re.match("^(.+)/(.+)$", w)
-                
+
                 # Extract the word information
                 token, POS = m.group(1), m.group(2)
 
                 # Add the token/POS to the sentence container
                 container.append((token.lower(), POS))
-                    
+
             # Add the stop token at the end of the container
             container.append((self.stop, self.stop))
 
             # Recopy the container into the current sentence
             self.sentence[i] = container
-    #-B-----------------------------------------------------------------------B-
-    
-    
+
+            #-B-----------------------------------------------------------------------B-
+
+
     #-T-----------------------------------------------------------------------T-
     def build_graph(self):
         """
@@ -268,7 +270,7 @@ class word_graph:
         Each node in the graph is represented as a tuple ('word/POS', id) and 
         possesses an info list containing (sentence_id, position_in_sentence)
         tuples.
-        """     
+        """
 
         # Iteratively add each sentence in the graph ---------------------------
         for i in range(self.length):
@@ -292,7 +294,7 @@ class word_graph:
                 # If stopword or punctuation mark, continues
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
-            
+
                 # Create the node identifier
                 node = token.lower() + self.sep + POS
 
@@ -303,8 +305,8 @@ class word_graph:
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)],
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)],
+                        label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
@@ -316,7 +318,7 @@ class word_graph:
                     ids = []
                     for sid, pos_s in self.graph.node[(node, 0)]['info']:
                         ids.append(sid)
-                    
+
                     # Update the node in the graph if not same sentence
                     if not i in ids:
                         self.graph.node[(node, 0)]['info'].append((i, j))
@@ -324,8 +326,8 @@ class word_graph:
 
                     # Else Create new node for redundant word
                     else:
-                        self.graph.add_node( (node, 1), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, 1), info=[(i, j)],
+                            label=token.lower())
                         mapping[j] = (node, 1)
 
             #-------------------------------------------------------------------
@@ -336,7 +338,7 @@ class word_graph:
 
                 # Get the word and tag
                 token, POS = self.sentence[i][j]
-                
+
                 # If stopword or punctuation mark, continues
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
@@ -346,13 +348,13 @@ class word_graph:
 
                     # Create the node identifier
                     node = token.lower() + self.sep + POS
-                    
+
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS = self.sentence[i][j - 1]
+                    next_token, next_POS = self.sentence[i][j + 1]
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
-                    
+
                     # Find the number of ambiguous nodes in the graph
                     k = self.ambiguous_nodes(node)
 
@@ -360,16 +362,15 @@ class word_graph:
                     # context or the greater frequency.
                     ambinode_overlap = []
                     ambinode_frequency = []
-            
+
                     # For each ambiguous node
                     for l in range(k):
-
                         # Get the immediate context words of the nodes
                         l_context = self.get_directed_context(node, l, 'left')
                         r_context = self.get_directed_context(node, l, 'right')
-                        
+
                         # Compute the (directed) context sum
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # Add the count of the overlapping words
@@ -377,38 +378,38 @@ class word_graph:
 
                         # Add the frequency of the ambiguous node
                         ambinode_frequency.append(
-                            len( self.graph.node[(node, l)]['info'] )
+                            len(self.graph.node[(node, l)]['info'])
                         )
-                
+
                     # Search for the best candidate while avoiding a loop
                     found = False
                     selected = 0
                     while not found:
-                    
+
                         # Select the ambiguous node
                         selected = self.max_index(ambinode_overlap)
                         if ambinode_overlap[selected] == 0:
                             selected = self.max_index(ambinode_frequency)
-                        
+
                         # Get the sentences id of this node
                         ids = []
                         for sid, p in self.graph.node[(node, selected)]['info']:
                             ids.append(sid)
-                        
+
                         # Test if there is no loop
                         if i not in ids:
                             found = True
                             break
-            
+
                         # Remove the candidate from the lists
                         else:
                             del ambinode_overlap[selected]
                             del ambinode_frequency[selected]
-                            
+
                         # Avoid endless loops
                         if len(ambinode_overlap) == 0:
                             break
-                    
+
                     # Update the node in the graph if not same sentence
                     if found:
                         self.graph.node[(node, selected)]['info'].append((i, j))
@@ -416,10 +417,10 @@ class word_graph:
 
                     # Else create new node for redundant word
                     else:
-                        self.graph.add_node( (node, k), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, k), info=[(i, j)],
+                            label=token.lower())
                         mapping[j] = (node, k)
-            
+
             #-------------------------------------------------------------------
             # 3. map the stopwords to the nodes
             #-------------------------------------------------------------------
@@ -429,12 +430,12 @@ class word_graph:
                 token, POS = self.sentence[i][j]
 
                 # If *NOT* stopword, continues
-                if not token in self.stopwords :
+                if not token in self.stopwords:
                     continue
 
                 # Create the node identifier
                 node = token.lower() + self.sep + POS
-                    
+
                 # Find the number of ambiguous nodes in the graph
                 k = self.ambiguous_nodes(node)
 
@@ -442,43 +443,42 @@ class word_graph:
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)], 
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)],
+                        label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
-   
+
                 # Else find the node with overlap in context or create one
                 else:
-                    
+
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS = self.sentence[i][j - 1]
+                    next_token, next_POS = self.sentence[i][j + 1]
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
 
                     ambinode_overlap = []
-            
+
                     # For each ambiguous node
                     for l in range(k):
-
                         # Get the immediate context words of the nodes, the
                         # boolean indicates to consider only non stopwords
-                        l_context = self.get_directed_context(node, l, 'left',\
-                                    True)
-                        r_context = self.get_directed_context(node, l, 'right',\
-                                    True)
-                        
+                        l_context = self.get_directed_context(node, l, 'left', \
+                            True)
+                        r_context = self.get_directed_context(node, l, 'right', \
+                            True)
+
                         # Compute the (directed) context sum
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # Add the count of the overlapping words
                         ambinode_overlap.append(val)
-                    
+
                     # Get best overlap candidate
                     selected = self.max_index(ambinode_overlap)
-                
+
                     # Get the sentences id of the best candidate node
                     ids = []
                     for sid, pos_s in self.graph.node[(node, selected)]['info']:
@@ -500,8 +500,8 @@ class word_graph:
                     # Else create a new node
                     else:
                         # Add the node in the graph
-                        self.graph.add_node( (node, k) , info=[(i, j)],
-                                             label=token.lower() )
+                        self.graph.add_node((node, k), info=[(i, j)],
+                            label=token.lower())
 
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
@@ -520,7 +520,7 @@ class word_graph:
 
                 # Create the node identifier
                 node = token.lower() + self.sep + POS
-                    
+
                 # Find the number of ambiguous nodes in the graph
                 k = self.ambiguous_nodes(node)
 
@@ -528,40 +528,39 @@ class word_graph:
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)], 
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)],
+                        label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
-   
+
                 # Else find the node with overlap in context or create one
                 else:
-                    
+
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS = self.sentence[i][j - 1]
+                    next_token, next_POS = self.sentence[i][j + 1]
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
 
                     ambinode_overlap = []
-            
+
                     # For each ambiguous node
                     for l in range(k):
-
                         # Get the immediate context words of the nodes
                         l_context = self.get_directed_context(node, l, 'left')
                         r_context = self.get_directed_context(node, l, 'right')
-                        
+
                         # Compute the (directed) context sum
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # Add the count of the overlapping words
                         ambinode_overlap.append(val)
-                    
+
                     # Get best overlap candidate
                     selected = self.max_index(ambinode_overlap)
-                
+
                     # Get the sentences id of the best candidate node
                     ids = []
                     for sid, pos_s in self.graph.node[(node, selected)]['info']:
@@ -580,8 +579,8 @@ class word_graph:
                     # Else create a new node
                     else:
                         # Add the node in the graph
-                        self.graph.add_node( (node, k), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, k), info=[(i, j)],
+                            label=token.lower())
 
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
@@ -590,15 +589,16 @@ class word_graph:
             # 4. Connects the mapped words with directed edges
             #-------------------------------------------------------------------
             for j in range(1, len(mapping)):
-                self.graph.add_edge(mapping[j-1], mapping[j])
+                self.graph.add_edge(mapping[j - 1], mapping[j])
 
         # Assigns a weight to each node in the graph ---------------------------
         for node1, node2 in self.graph.edges_iter():
             edge_weight = self.get_edge_weight(node1, node2)
             self.graph.add_edge(node1, node2, weight=edge_weight)
-    #-B-----------------------------------------------------------------------B-
 
- 
+            #-B-----------------------------------------------------------------------B-
+
+
     #-T-----------------------------------------------------------------------T-
     def ambiguous_nodes(self, node):
         """
@@ -606,10 +606,11 @@ class word_graph:
         (ambiguous) nodes in the graph.
         """
         k = 0
-        while(self.graph.has_node((node, k))):
+        while (self.graph.has_node((node, k))):
             k += 1
         return k
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -634,17 +635,17 @@ class word_graph:
 
         # For all the sentence/position tuples
         for sid, off in self.graph.node[(node, k)]['info']:
-            
-            prev = self.sentence[sid][off-1][0].lower() + self.sep +\
-                   self.sentence[sid][off-1][1]
-                   
-            next = self.sentence[sid][off+1][0].lower() + self.sep +\
-                   self.sentence[sid][off+1][1]
-                   
+
+            prev = self.sentence[sid][off - 1][0].lower() + self.sep + \
+                   self.sentence[sid][off - 1][1]
+
+            next = self.sentence[sid][off + 1][0].lower() + self.sep + \
+                   self.sentence[sid][off + 1][1]
+
             if non_pos:
-                if self.sentence[sid][off-1][0] not in self.stopwords:
+                if self.sentence[sid][off - 1][0] not in self.stopwords:
                     l_context.append(prev)
-                if self.sentence[sid][off+1][0] not in self.stopwords:
+                if self.sentence[sid][off + 1][0] not in self.stopwords:
                     r_context.append(next)
             else:
                 l_context.append(prev)
@@ -660,7 +661,8 @@ class word_graph:
         else:
             l_context.extend(r_context)
             return l_context
-    #-B-----------------------------------------------------------------------B-
+
+            #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -678,14 +680,14 @@ class word_graph:
 
         # Get the list of (sentence_id, pos_in_sentence) for node1
         info1 = self.graph.node[node1]['info']
-        
+
         # Get the list of (sentence_id, pos_in_sentence) for node2
         info2 = self.graph.node[node2]['info']
-        
+
         # Get the frequency of node1 in the graph
         # freq1 = self.graph.degree(node1)
         freq1 = len(info1)
-        
+
         # Get the frequency of node2 in cluster
         # freq2 = self.graph.degree(node2)
         freq2 = len(info2)
@@ -695,56 +697,57 @@ class word_graph:
 
         # For each sentence of the cluster (for s in S)
         for s in range(self.length):
-        
+
             # Compute diff(s, i, j) which is calculated as
             # pos(s, i) - pos(s, j) if pos(s, i) < pos(s, j)
             # O otherwise
-    
+
             # Get the positions of i and j in s, named pos(s, i) and pos(s, j)
             # As a word can appear at multiple positions in a sentence, a list
             # of positions is used
             pos_i_in_s = []
             pos_j_in_s = []
-            
+
             # For each (sentence_id, pos_in_sentence) of node1
             for sentence_id, pos_in_sentence in info1:
                 # If the sentence_id is s
                 if sentence_id == s:
                     # Add the position in s
                     pos_i_in_s.append(pos_in_sentence)
-            
+
             # For each (sentence_id, pos_in_sentence) of node2
             for sentence_id, pos_in_sentence in info2:
                 # If the sentence_id is s
                 if sentence_id == s:
                     # Add the position in s
                     pos_j_in_s.append(pos_in_sentence)
-                    
+
             # Container for all the diff(s, i, j) for i and j
             all_diff_pos_i_j = []
-            
+
             # Loop over all the i, j couples
             for x in range(len(pos_i_in_s)):
                 for y in range(len(pos_j_in_s)):
                     diff_i_j = pos_i_in_s[x] - pos_j_in_s[y]
                     # Test if word i appears *BEFORE* word j in s
                     if diff_i_j < 0:
-                        all_diff_pos_i_j.append(-1.0*diff_i_j)
-                        
+                        all_diff_pos_i_j.append(-1.0 * diff_i_j)
+
             # Add the mininum distance to diff (i.e. in case of multiple 
             # occurrencies of i or/and j in sentence s), 0 otherwise.
             if len(all_diff_pos_i_j) > 0:
-                diff.append(1.0/min(all_diff_pos_i_j))
+                diff.append(1.0 / min(all_diff_pos_i_j))
             else:
                 diff.append(0.0)
-                
+
         weight1 = freq1
         weight2 = freq2
 
         return ( (freq1 + freq1) / sum(diff) ) / (weight1 * weight2)
-    #-B-----------------------------------------------------------------------B-
-   
-   
+
+        #-B-----------------------------------------------------------------------B-
+
+
     #-T-----------------------------------------------------------------------T-
     def k_shortest_paths(self, start, end, k=10):
         """
@@ -759,11 +762,11 @@ class word_graph:
         # Initializing the label container 
         orderedX = []
         orderedX.append((0, start, 0))
-        
+
         # Initializing the path container
         paths = {}
         paths[(0, start, 0)] = [start]
-        
+
         # Initialize the visited container
         visited = {}
         visited[start] = 0
@@ -771,27 +774,27 @@ class word_graph:
         # Initialize the sentence container that will be used to remove 
         # duplicate sentences passing throught different nodes
         sentence_container = {}
-    
+
         # While the number of shortest paths isn't reached or all paths explored
         while len(kshortestpaths) < k and len(orderedX) > 0:
-        
+
             # Searching for the shortest distance in orderedX
             shortest = orderedX.pop(0)
             shortestpath = paths[shortest]
-            
+
             # Removing the shortest node from X and paths
             del paths[shortest]
-    
+
             # Iterating over the accessible nodes
             for node in self.graph.neighbors(shortest[1]):
-            
+
                 # To avoid loops
                 if node in shortestpath:
                     continue
-            
+
                 # Compute the weight to node
                 w = shortest[0] + self.graph[shortest[1]][node]['weight']
-            
+
                 # If found the end, adds to k-shortest paths 
                 if node == end:
 
@@ -816,7 +819,7 @@ class word_graph:
                         # 1.
                         if tag in self.verbs:
                             nb_verbs += 1
-                        # 2.
+                            # 2.
                         if not re.search('(?u)^\W$', word):
                             length += 1
                         # 3.
@@ -827,16 +830,16 @@ class word_graph:
                                 paired_parentheses += 1
                             elif word == '"':
                                 quotation_mark_number += 1
-                        # 4.
+                                # 4.
                         raw_sentence += word + ' '
-                    
+
                     # Remove extra space from sentence
                     raw_sentence = raw_sentence.strip()
 
-                    if nb_verbs >0 and \
-                        length >= self.nb_words and \
-                        paired_parentheses == 0 and \
-                        (quotation_mark_number%2) == 0 \
+                    if nb_verbs > 0 and \
+                                    length >= self.nb_words and \
+                                    paired_parentheses == 0 and \
+                                    (quotation_mark_number % 2) == 0 \
                         and not sentence_container.has_key(raw_sentence):
                         path = [node]
                         path.extend(shortestpath)
@@ -845,10 +848,10 @@ class word_graph:
                         kshortestpaths.append((path, weight))
                         sentence_container[raw_sentence] = 1
 
-                    #-B-------------------------------------------------------B-
+                        #-B-------------------------------------------------------B-
 
                 else:
-            
+
                     # test if node has already been visited
                     if visited.has_key(node):
                         visited[node] += 1
@@ -858,15 +861,16 @@ class word_graph:
 
                     # Add the node to orderedX
                     bisect.insort(orderedX, (w, node, id))
-                    
+
                     # Add the node to paths
                     paths[(w, node, id)] = [node]
                     paths[(w, node, id)].extend(shortestpath)
-    
+
         # Returns the list of shortest paths
         return kshortestpaths
-    #-B-----------------------------------------------------------------------B-
-    
+
+        #-B-----------------------------------------------------------------------B-
+
     #-T-----------------------------------------------------------------------T-
     def get_compression(self, nb_candidates=50):
         """
@@ -878,29 +882,30 @@ class word_graph:
         """
 
         # Search for the k-shortest paths in the graph
-        self.paths = self.k_shortest_paths((self.start+self.sep+self.start, 0),
-                                           (self.stop+self.sep+self.stop, 0),
-                                            nb_candidates)
+        self.paths = self.k_shortest_paths((self.start + self.sep + self.start, 0),
+            (self.stop + self.sep + self.stop, 0),
+            nb_candidates)
 
         # Initialize the fusion container
         fusions = []
-        
+
         # Test if there are some paths
         if len(self.paths) > 0:
-        
+
             # For nb candidates 
             for i in range(min(nb_candidates, len(self.paths))):
                 nodes = self.paths[i][0]
                 sentence = []
-                
-                for j in range(1, len(nodes)-1):
+
+                for j in range(1, len(nodes) - 1):
                     word, tag = nodes[j][0].split(self.sep)
                     sentence.append((word, tag))
 
                 bisect.insort(fusions, (self.paths[i][1], sentence))
 
         return fusions
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
     #-T-----------------------------------------------------------------------T-
     def max_index(self, l):
@@ -918,7 +923,8 @@ class word_graph:
                 max_val = l[z]
                 max_ind = z
         return max_ind
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -935,13 +941,13 @@ class word_graph:
 
         # Loop over the sentences
         for i in range(self.length):
-        
+
             # For each tuple (token, POS) of sentence i
             for token, POS in self.sentence[i]:
-            
+
                 # generate the word/POS token
                 node = token.lower() + self.sep + POS
-                
+
                 # Add the token to the terms list
                 if not terms.has_key(node):
                     terms[node] = [i]
@@ -950,10 +956,10 @@ class word_graph:
 
         # Loop over the terms
         for w in terms:
-
             # Compute the term frequency
             self.term_freq[w] = len(terms[w])
-    #-B-----------------------------------------------------------------------B-
+
+            #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -973,14 +979,15 @@ class word_graph:
 
         # Return the set of stopwords
         return stopwords
-    #-B-----------------------------------------------------------------------B-
-    
+
+        #-B-----------------------------------------------------------------------B-
+
 
     #-T-----------------------------------------------------------------------T-
     def write_dot(self, dotfile):
         """ Outputs the word graph in dot format in the specified file. """
         nx.write_dot(self.graph, dotfile)
-    #-B-----------------------------------------------------------------------B-
+        #-B-----------------------------------------------------------------------B-
 
 #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
 # ] Ending word_graph class
@@ -1019,8 +1026,8 @@ class keyphrase_reranker:
     """
 
     #-T-----------------------------------------------------------------------T-
-    def __init__(self, sentence_list, nbest_compressions, lang="en", 
-                 patterns=[], stopwords=[]):
+    def __init__(self, sentence_list, nbest_compressions, lang="en",
+            patterns=[], stopwords=[]):
 
         self.sentences = list(sentence_list)
         """ The list of related sentences provided by the user. """
@@ -1034,7 +1041,7 @@ class keyphrase_reranker:
         self.lang = lang
         """ The language of the input sentences, default is English (en)."""
 
-        self.stopwords = set(stopwords) 
+        self.stopwords = set(stopwords)
         """ The set of words to be excluded from keyphrase extraction. """
 
         self.syntactic_filter = ['JJ', 'NNP', 'NNS', 'NN', 'NNPS']
@@ -1088,10 +1095,10 @@ class keyphrase_reranker:
 
         # For each sentence 
         for i in range(len(self.sentences)):
-        
+
             # Normalise extra white spaces
             self.sentences[i] = re.sub(' +', ' ', self.sentences[i])
-            
+
             # Tokenize the current sentence in word/POS
             sentence = self.sentences[i].split(' ')
 
@@ -1107,10 +1114,10 @@ class keyphrase_reranker:
 
                 # Modify the POS tags of stopwords to exclude them
                 if sentence[j][0] in self.stopwords:
-                    sentence[j] = (sentence[j][0], "STOPWORD")     
+                    sentence[j] = (sentence[j][0], "STOPWORD")
 
-                # Add the word only if it belongs to one of the syntactic 
-                # categories
+                    # Add the word only if it belongs to one of the syntactic
+                    # categories
                 if sentence[j][1] in self.syntactic_filter:
 
                     # Add node to the graph if not exists
@@ -1124,30 +1131,31 @@ class keyphrase_reranker:
                 first_node = sentence[j]
 
                 # Switch to set the window for the whole sentence
-                max_window = window 
+                max_window = window
                 if window < 1:
                     max_window = len(sentence)
 
                 # For the other words in the window
-                for k in range(j+1, min(len(sentence), j+max_window)):
+                for k in range(j + 1, min(len(sentence), j + max_window)):
 
                     # Get the second node
                     second_node = sentence[k]
 
                     # Check if nodes exists 
                     if self.graph.has_node(first_node) and \
-                       self.graph.has_node(second_node):
+                            self.graph.has_node(second_node):
 
                         # Add edge if not exists
                         if not self.graph.has_edge(first_node, second_node):
-                            self.graph.add_edge(first_node,second_node,weight=1)
+                            self.graph.add_edge(first_node, second_node, weight=1)
                         # Else modify weight
                         else:
                             self.graph[first_node][second_node]['weight'] += 1
 
             # Replace sentence by the list of tuples
             self.sentences[i] = sentence
-    #-B-----------------------------------------------------------------------B-
+
+            #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1188,17 +1196,17 @@ class keyphrase_reranker:
                     candidate = []
 
                 else:
-                    
+
                     # Flush the buffer
                     candidate = []
-               
+
             # Handle the last possible candidate
             if len(candidate) > 0 and self.is_a_candidate(candidate):
-
                 # Add candidate
                 keyphrase = ' '.join(u[0] for u in candidate)
                 self.keyphrase_candidates[keyphrase] = candidate
-    #-B-----------------------------------------------------------------------B-
+
+                #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1215,7 +1223,8 @@ class keyphrase_reranker:
                 return False
 
         return True
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1229,7 +1238,7 @@ class keyphrase_reranker:
 
         # Initialise the maximum node difference for checking stability
         max_node_difference = f_conv
-    
+
         # Initialise node scores to 1
         self.word_scores = {}
         for node in self.graph.nodes():
@@ -1264,10 +1273,11 @@ class keyphrase_reranker:
 
                 # Compute the difference between old and new score
                 score_difference = math.fabs(self.word_scores[node_i] \
-                                   - current_node_scores[node_i])
+                                             - current_node_scores[node_i])
 
                 max_node_difference = max(score_difference, score_difference)
-    #-B-----------------------------------------------------------------------B-
+
+                #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1291,7 +1301,8 @@ class keyphrase_reranker:
 
             # Add score to the keyphrase candidates
             self.keyphrase_scores[keyphrase] = keyphrase_score
-    #-B-----------------------------------------------------------------------B-
+
+            #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1306,9 +1317,9 @@ class keyphrase_reranker:
         """
 
         # Sort keyphrase candidates by length
-        descending = sorted(self.keyphrase_candidates, 
-                            key = lambda x: len(self.keyphrase_candidates[x]), 
-                            reverse=True)
+        descending = sorted(self.keyphrase_candidates,
+            key=lambda x: len(self.keyphrase_candidates[x]),
+            reverse=True)
 
         # Initialize the cluster container
         clusters = {}
@@ -1317,7 +1328,7 @@ class keyphrase_reranker:
         for keyphrase in descending:
 
             found_cluster = False
-            
+
             # Create a set of words from the keyphrase
             keyphrase_words = set(keyphrase.split(' '))
 
@@ -1329,8 +1340,7 @@ class keyphrase_reranker:
 
                 # Check if keyphrase words are all contained in the cluster
                 # representative words
-                if len(keyphrase_words.difference(cluster_words)) == 0 :
-                    
+                if len(keyphrase_words.difference(cluster_words)) == 0:
                     # Add keyphrase to cluster
                     clusters[cluster].append(keyphrase)
 
@@ -1346,11 +1356,10 @@ class keyphrase_reranker:
 
         # Loop over the clusters to find the best keyphrases
         for cluster in clusters:
-
             # Find the best scored keyphrase candidate in the cluster
-            sorted_cluster = sorted(clusters[cluster], 
-                            key=lambda cluster: self.keyphrase_scores[cluster], 
-                            reverse=True)
+            sorted_cluster = sorted(clusters[cluster],
+                key=lambda cluster: self.keyphrase_scores[cluster],
+                reverse=True)
 
             best_candidate_keyphrases.append(sorted_cluster[0])
 
@@ -1358,9 +1367,9 @@ class keyphrase_reranker:
         non_redundant_keyphrases = []
 
         # Sort best candidate by score
-        sorted_keyphrases = sorted(best_candidate_keyphrases, 
-                        key=lambda keyphrase: self.keyphrase_scores[keyphrase], 
-                        reverse=True)
+        sorted_keyphrases = sorted(best_candidate_keyphrases,
+            key=lambda keyphrase: self.keyphrase_scores[keyphrase],
+            reverse=True)
 
         # Last loop to remove redundancy in cluster best candidates
         for keyphrase in sorted_keyphrases:
@@ -1379,7 +1388,8 @@ class keyphrase_reranker:
             if not keyphrase in non_redundant_keyphrases:
                 del self.keyphrase_candidates[keyphrase]
                 del self.keyphrase_scores[keyphrase]
-    #-B-----------------------------------------------------------------------B-
+
+                #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1408,11 +1418,12 @@ class keyphrase_reranker:
 
             score = ( cummulative_score / (len(path) * total_keyphrase_score) )
 
-            bisect.insort( reranked_compressions, 
-                           (score, path) )
+            bisect.insort(reranked_compressions,
+                (score, path))
 
         return reranked_compressions
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
     #-T-----------------------------------------------------------------------T-
     def wordpos_to_tuple(self, word, delim='/'):
@@ -1422,14 +1433,15 @@ class keyphrase_reranker:
         """
 
         # Splitting word, POS using regex
-        m = re.match("^(.+)"+delim+"(.+)$", word)
+        m = re.match("^(.+)" + delim + "(.+)$", word)
 
         # Extract the word information
         token, POS = m.group(1), m.group(2)
 
         # Return the tuple 
         return (token.lower(), POS)
-    #-B-----------------------------------------------------------------------B-
+
+        #-B-----------------------------------------------------------------------B-
 
 
     #-T-----------------------------------------------------------------------T-
@@ -1440,8 +1452,8 @@ class keyphrase_reranker:
         """
 
         # Return the word +delim+ POS
-        return wordpos_tuple[0]+delim+wordpos_tuple[1]
-    #-B-----------------------------------------------------------------------B-
+        return wordpos_tuple[0] + delim + wordpos_tuple[1]
+        #-B-----------------------------------------------------------------------B-
 
 
 #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
